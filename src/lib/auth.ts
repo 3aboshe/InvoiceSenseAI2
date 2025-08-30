@@ -18,20 +18,20 @@ export const authOptions: NextAuthOptions = {
 
         // For demo purposes, we'll use a simple check
         // In production, you should use proper database authentication
-        if (credentials.email === "admin@example.com" && credentials.password === "demo123") {
+        if (credentials.email === "admin@demo.com" && credentials.password === "demo123") {
           return {
             id: "1",
-            email: "admin@example.com",
+            email: "admin@demo.com",
             name: "Admin User",
             role: "ADMIN",
           }
         }
 
-        if (credentials.email === "user@example.com" && credentials.password === "demo123") {
+        if (credentials.email === "employee@demo.com" && credentials.password === "demo123") {
           return {
             id: "2",
-            email: "user@example.com",
-            name: "Demo User",
+            email: "employee@demo.com",
+            name: "Employee User",
             role: "EMPLOYEE",
           }
         }

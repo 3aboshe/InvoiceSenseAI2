@@ -140,6 +140,18 @@ Make sure to set these in your Vercel dashboard:
 - `AIRTABLE_TABLE_NAME` - Your Airtable table name
 - `GROQ_API_KEY` - Your Groq API key
 
+## 🔑 Demo Login Credentials
+
+For testing your deployed app, you can use these credentials:
+
+**Admin User:**
+- Email: `admin@demo.com`
+- Password: `demo123`
+
+**Employee User:**
+- Email: `employee@demo.com`
+- Password: `demo123`
+
 ## 📊 Airtable Setup
 
 The application expects an Airtable base with the following structure:
