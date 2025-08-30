@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { db } from "@/lib/db"
 import { createAirtableService } from "@/lib/airtable"
 import { emitInvoiceUpdate, emitStatsUpdate } from "@/lib/socket"
 import { Server } from "socket.io"
@@ -244,88 +243,37 @@ ${extractedText}`
       // Calculate total amount from line items
       const totalAmount = structuredData.line_items.reduce((sum: number, item: any) => sum + item.amount, 0)
 
-      // Find or create client
-      let client = await db.client.findFirst({
-        where: {
-          OR: [
-            { name: structuredData.company },
-            { id: structuredData.client_id }
-          ]
-        }
-      })
-
-      if (!client) {
-        client = await db.client.create({
-          data: {
-            name: structuredData.company || "Unknown Client",
-            totalRevenue: 0,
-            invoiceCount: 0
-          }
-        })
+      // Create simplified client and invoice data for demo
+      const client = {
+        id: "1",
+        name: structuredData.company || "Unknown Client"
       }
 
-      // Create invoice record
-      const invoice = await db.invoice.create({
-        data: {
-          invoiceNumber: structuredData.invoice_number || `INV-${Date.now()}`,
-          clientId: client.id,
-          processedById: session.user.id,
-          status: "COMPLETED",
-          processingTime: Date.now() - startTime,
-          originalFilename: file.name,
-          totalAmount: totalAmount,
-          currency: structuredData.line_items[0]?.currency || "USD",
-          lineItems: {
-            create: structuredData.line_items.map((item: any) => ({
-              description: item.description,
-              quantity: item.quantity,
-              unitPrice: item.unit_price,
-              amount: item.amount
-            }))
-          }
+      const invoice = {
+        id: `INV-${Date.now()}`,
+        invoiceNumber: structuredData.invoice_number || `INV-${Date.now()}`,
+        clientId: client.id,
+        processedById: session.user.id,
+        status: "COMPLETED",
+        processingTime: Date.now() - startTime,
+        originalFilename: file.name,
+        totalAmount: totalAmount,
+        currency: structuredData.line_items[0]?.currency || "USD",
+        lineItems: structuredData.line_items.map((item: any) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          amount: item.amount
+        })),
+        processedBy: {
+          name: session.user.name || session.user.email,
+          email: session.user.email
         },
-        include: {
-          lineItems: true,
-          processedBy: {
-            select: {
-              name: true,
-              email: true
-            }
-          },
-          client: {
-            select: {
-              name: true,
-              email: true
-            }
-          }
+        client: {
+          name: client.name,
+          email: "demo@example.com"
         }
-      })
-
-      // Update client statistics
-      await db.client.update({
-        where: { id: client.id },
-        data: {
-          totalRevenue: {
-            increment: totalAmount
-          },
-          invoiceCount: {
-            increment: 1
-          },
-          lastInvoiceDate: new Date()
-        }
-      })
-
-      // Create analytics record
-      await db.analytics.create({
-        data: {
-          totalRevenue: totalAmount,
-          invoiceCount: 1,
-          avgProcessingTime: Date.now() - startTime,
-          currencyBreakdown: JSON.stringify({
-            [structuredData.line_items[0]?.currency || "USD"]: totalAmount
-          })
-        }
-      })
+      }
 
       // Sync to Airtable
       const airtableService = createAirtableService()
@@ -398,17 +346,15 @@ ${extractedText}`
     } catch (aiError) {
       console.error("AI Processing Error:", aiError)
       
-      // Create invoice with ERROR status if AI processing fails
-      const errorInvoice = await db.invoice.create({
-        data: {
-          processedById: session.user.id,
-          status: "ERROR",
-          processingTime: Date.now() - startTime,
-          originalFilename: file.name,
-          totalAmount: 0,
-          currency: "USD"
-        }
-      })
+      // Create simplified error invoice data
+      const errorInvoice = {
+        id: `ERROR-${Date.now()}`,
+        status: "ERROR",
+        processingTime: Date.now() - startTime,
+        originalFilename: file.name,
+        totalAmount: 0,
+        currency: "USD"
+      }
 
       // Emit invoice error event
       if (io) {
